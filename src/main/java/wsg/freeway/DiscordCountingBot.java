@@ -10,24 +10,45 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.internal.entities.emoji.UnicodeEmojiImpl;
 import org.jetbrains.annotations.NotNull;
-import wsg.freeway.data.AdminData;
-import wsg.freeway.data.GameData;
-import wsg.freeway.other.Config;
 
 import java.awt.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.util.Properties;
 
 public class DiscordCountingBot extends ListenerAdapter {
-
     private final AdminData adminData = AdminData.loadObjFromJSON();
     private GameData gameData = GameData.loadObjFromJSON();
+    private static final Properties properties = new Properties();
 
+    public static void main(String[] args) throws Exception {
 
-    public static void main(String[] args) throws InterruptedException {
+        if (!new File("countingBot.properties").exists()) {
+            BufferedWriter br = new BufferedWriter(new FileWriter("countingBot.properties"));
+            br.write("token=none\n");
+            br.write("channel=none\n");
+            br.write("guild=none\n");
+            br.write("adminFile=admins.json\n");
+            br.write("gameDataFile=gameData.json");
+            br.flush();
+            System.out.println("Please configure in countingBot.properties");
+            return;
+        }
+
+        properties.load(new FileInputStream("countingBot.properties"));
+
+        String token = properties.getProperty("token");
+        String channel = properties.getProperty("channel");
+        String guildId = properties.getProperty("guild");
+
+        if (token.equals("none") || channel.equals("none") || guildId.equals("none")) {
+            System.out.println("Please configure in countingBot.properties");
+            return;
+        }
+
         DiscordCountingBot bot = new DiscordCountingBot();
-
-        String token = Config.getToken();
-        String channel = Config.getChannel();
-        String guildId = Config.getGuild();
 
         int highScore = bot.gameData.getHighScore();
         int curNum = bot.gameData.getCurNum();
@@ -76,7 +97,7 @@ public class DiscordCountingBot extends ListenerAdapter {
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         if (event.getAuthor().isBot()) return;
-        if (!event.getChannel().getId().equals(Config.getChannel())) return;
+        if (!event.getChannel().getId().equals(properties.getProperty("channel"))) return;
 
         String messageSent = event.getMessage().getContentRaw();
 
@@ -233,14 +254,23 @@ public class DiscordCountingBot extends ListenerAdapter {
     }
 
     public void reset() {
-        GameData obj = new GameData();
+        GameData obj;
+        try {
+            obj = new GameData();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         obj.setHighScore(gameData.getHighScore());
         GameData.saveObjToJSON(obj);
         gameData = GameData.loadObjFromJSON();
     }
 
     public void resetAll() {
-        GameData.saveObjToJSON(new GameData());
+        try {
+            GameData.saveObjToJSON(new GameData());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         gameData = GameData.loadObjFromJSON();
     }
 
