@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -85,6 +86,14 @@ public class DiscordCountingBot extends ListenerAdapter {
         }
 
         assert guild != null;
+        for (String adminId : AdminData.loadObjFromJSON().getAdmins()) {
+            jda.retrieveUserById(adminId)
+                    .map(User::getName)
+                    .queue(name -> {
+                        // use name here
+                        System.out.println(name + " is Admin");
+                    });
+        }
         System.out.println("Bot Ready, should be ONLINE\n" +
                 "\nToken: " + token +
                 "\nChannel: " + channel +
@@ -106,6 +115,7 @@ public class DiscordCountingBot extends ListenerAdapter {
             number = Integer.parseInt(messageSent);
         } catch (NumberFormatException e) {
             event.getMessage().delete().queue();
+            System.out.println("Deleted invalid message: '" + event.getMessage().getContentRaw() + "' send by '" + event.getAuthor().getName() + "'");
             return;
         }
 
@@ -120,6 +130,7 @@ public class DiscordCountingBot extends ListenerAdapter {
 
             embedBuilder.setColor(Color.RED);
             embedBuilder.setTitle("[Fail] Nicht Zwei mal hinereinander.");
+            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + gameData.getNextNum() + ". They counted twice.");
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
             return;
         }
@@ -133,6 +144,7 @@ public class DiscordCountingBot extends ListenerAdapter {
             embedBuilder.setColor(Color.RED);
             embedBuilder.setTitle("[Fail] Fangt wieder bei 1 an.");
             embedBuilder.setFooter("Die erwartete Zahl war eigentlich: " + gameData.getNextNum());
+            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + gameData.getNextNum() + " with the number " + number + ". Wrong Number.");
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
             reset();
         } else if (number == gameData.getNextNum()) {
@@ -142,6 +154,7 @@ public class DiscordCountingBot extends ListenerAdapter {
             gameData.setLastUser(event.getAuthor().getId());
 
             save();
+            System.out.println("User '" + event.getAuthor().getName() + "' counted " + number + ".");
 
             if (number > gameData.getHighScore()) {
                 String trophy = "\uD83C\uDFC6";
@@ -162,6 +175,9 @@ public class DiscordCountingBot extends ListenerAdapter {
             String notFound = "❎";
             String hehe = "\uD83C\uDF46";
             String cookie = "\uD83C\uDF6A";
+            String police = "\uD83D\uDE93";
+            String fireforce = "\uD83D\uDE92";
+            String ambulance = "\uD83D\uDE91";
             String computer = "\uD83D\uDCBB";
             String devil = "\uD83D\uDE08";
             String e = "\uD83C\uDDEA";
@@ -208,6 +224,12 @@ public class DiscordCountingBot extends ListenerAdapter {
                 }
                 case 666 -> addReaction(event, devil);
                 case 727 -> addReaction(event, cookie);
+                case 110, 911 -> addReaction(event, police);
+                case 112 -> {
+                    addReaction(event, fireforce);
+                    addReaction(event, ambulance);
+                    addReaction(event, police);
+                }
                 case 1337 -> addReaction(event, computer);
             }
         }
