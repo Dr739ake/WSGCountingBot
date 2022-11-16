@@ -18,11 +18,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.util.Properties;
+import java.util.Scanner;
 
 public class DiscordCountingBot extends ListenerAdapter {
     private final AdminData adminData = AdminData.loadObjFromJSON();
     private GameData gameData = GameData.loadObjFromJSON();
     private static final Properties properties = new Properties();
+    private static boolean devMode;
 
     public static void main(String[] args) throws Exception {
 
@@ -44,6 +46,15 @@ public class DiscordCountingBot extends ListenerAdapter {
         String channel = properties.getProperty("channel");
         String guildId = properties.getProperty("guild");
 
+        try {
+            devMode = Boolean.parseBoolean(properties.getProperty("devMode"));
+            if(devMode) {
+                System.out.println("!!!DEVMODE ENABLED!!!");
+            }
+        } catch (Exception e) {
+            devMode = false;
+        }
+
         if (token.equals("none") || channel.equals("none") || guildId.equals("none")) {
             System.out.println("Please configure in countingBot.properties");
             return;
@@ -53,20 +64,15 @@ public class DiscordCountingBot extends ListenerAdapter {
 
         int highScore = bot.gameData.getHighScore();
         int curNum = bot.gameData.getCurNum();
-        int nextNum = bot.gameData.getNextNum();
 
-        boolean valid = true;
         if (token.equals("default")) {
             System.out.println("Configure the Bot in properties.json");
-            valid = false;
+            return;
         } else if (channel.equals("default")) {
             System.out.println("Configure the Bot in properties.json");
-            valid = false;
+            return;
         } else if (guildId.equals("default")) {
             System.out.println("Configure the Bot in properties.json");
-            valid = false;
-        }
-        if (!valid) {
             return;
         }
 
@@ -90,7 +96,7 @@ public class DiscordCountingBot extends ListenerAdapter {
             jda.retrieveUserById(adminId)
                     .map(User::getName)
                     .queue(name -> {
-                        // use name here
+                        // username here
                         System.out.println(name + " is Admin");
                     });
         }
@@ -99,8 +105,23 @@ public class DiscordCountingBot extends ListenerAdapter {
                 "\nChannel: " + channel +
                 "\nGuild: " + guild.getName() +
                 "\nHighScore: " + highScore +
-                "\nCurNum: " + curNum +
-                "\nNextNum: " + nextNum);
+                "\nCurNum: " + curNum);
+
+        boolean running = true;
+        while (running) {
+            Scanner sc = new Scanner(System.in);
+            String in = sc.nextLine();
+            if (in.equals("restart")) {
+                System.out.println("restarting...");
+                jda.shutdown();
+                running = false;
+                main(null);
+            } else if (in.equals("stop") || in.equals("shutdown")) {
+                System.out.println("stopping...");
+                jda.shutdown();
+                running = false;
+            }
+        }
     }
 
     @Override
@@ -119,23 +140,24 @@ public class DiscordCountingBot extends ListenerAdapter {
             return;
         }
 
-
         String fail = "❌";
-        if (event.getAuthor().getId().equals(gameData.getLastUser())) {
-            // game failed
-            addReaction(event, fail);
-            reset();
+        if (!devMode) {
+            if (event.getAuthor().getId().equals(gameData.getLastUser())) {
+                // game failed
+                addReaction(event, fail);
+                reset();
 
-            EmbedBuilder embedBuilder = new EmbedBuilder();
+                EmbedBuilder embedBuilder = new EmbedBuilder();
 
-            embedBuilder.setColor(Color.RED);
-            embedBuilder.setTitle("[Fail] Nicht Zwei mal hinereinander.");
-            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + gameData.getNextNum() + ". They counted twice.");
-            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
-            return;
+                embedBuilder.setColor(Color.RED);
+                embedBuilder.setTitle("[Fail] Nicht zweimal hintereinander.");
+                System.out.println("User '" + event.getAuthor().getName() + "' failed at " + (gameData.getCurNum() + 1) + ". They counted twice.");
+                event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+                return;
+            }
         }
 
-        if (number != gameData.getNextNum()) {
+        if (number != (gameData.getCurNum() + 1)) {
             // game failed
             addReaction(event, fail);
 
@@ -143,13 +165,12 @@ public class DiscordCountingBot extends ListenerAdapter {
 
             embedBuilder.setColor(Color.RED);
             embedBuilder.setTitle("[Fail] Fangt wieder bei 1 an.");
-            embedBuilder.setFooter("Die erwartete Zahl war eigentlich: " + gameData.getNextNum());
-            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + gameData.getNextNum() + " with the number " + number + ". Wrong Number.");
+            embedBuilder.setFooter("Die erwartete Zahl war eigentlich: " + (gameData.getCurNum() + 1));
+            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + (gameData.getCurNum() + 1) + " with the number " + number + ". Wrong Number.");
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
             reset();
-        } else if (number == gameData.getNextNum()) {
+        } else if (number == (gameData.getCurNum() + 1)) {
 
-            gameData.setNextNum(number + 1);
             gameData.setCurNum(number);
             gameData.setLastUser(event.getAuthor().getId());
 

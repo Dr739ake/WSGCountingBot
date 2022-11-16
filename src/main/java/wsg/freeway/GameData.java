@@ -8,7 +8,6 @@ import java.util.Properties;
 
 public class GameData {
     private int curNum;
-    private int nextNum;
     private int highScore;
     private String lastUser;
     private static File file;
@@ -16,7 +15,6 @@ public class GameData {
 
     public GameData() throws Exception {
         curNum = 0;
-        nextNum = 1;
         highScore = 0;
         lastUser = "";
         properties.load(new FileInputStream("countingBot.properties"));
@@ -52,7 +50,6 @@ public class GameData {
                 JSONObject jsonObject = new JSONObject(jsonString);
 
                 obj.setCurNum((Integer) jsonObject.get("curNum"));
-                obj.setNextNum((Integer) jsonObject.get("nextNum"));
                 obj.setHighScore((Integer) jsonObject.get("highScore"));
                 obj.setLastUser((String) jsonObject.get("lastUser"));
             } catch (IOException e) {
@@ -68,14 +65,6 @@ public class GameData {
 
     public void setCurNum(int curNum) {
         this.curNum = curNum;
-    }
-
-    public int getNextNum() {
-        return nextNum;
-    }
-
-    public void setNextNum(int nextNum) {
-        this.nextNum = nextNum;
     }
 
     public int getHighScore() {
@@ -98,7 +87,6 @@ public class GameData {
     public String toString() {
         return "GameData{" +
                 "curNum=" + curNum +
-                ", nextNum=" + nextNum +
                 ", highScore=" + highScore +
                 ", lastUser='" + lastUser + '\'' +
                 '}';
